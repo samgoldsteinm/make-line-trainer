@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Make Line Trainer</title>
+<meta name="description" content="Practice make-line builds and portions: specialty pizzas, BYO, sandwiches, loaded chicken, pasta and breads.">
+<meta name="theme-color" content="#0b4f93">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Make Line">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}[hidden]{display:none!important}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--band,#0b4f93);z-index:30}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a make-line station. Build card on top, the board in the middle, topping rail below, like working the line. */
+:root{
+  --bg:#edf1f6; --surface:#ffffff; --surface2:#e2e8f0; --ink:#13233a; --muted:#56677e; --line:#cdd6e2;
+  --band:#0b4f93; --bandInk:#ffffff; --blue:#0a5aa6; --red:#d1372a; --redInk:#ffffff;
+  --good:#1d8549; --goodBg:#e3f4ea; --warn:#a86a12; --warnBg:#fbf0dc; --bad:#bf3326; --badBg:#fbe6e3;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:"Barlow",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1520; --surface:#172130; --surface2:#213043; --ink:#e6edf6; --muted:#95a6bc; --line:#2b3a50;
+  --band:#123a66; --bandInk:#ffffff; --blue:#62acf2; --red:#f0584a; --redInk:#ffffff;
+  --good:#53c98a; --goodBg:#163627; --warn:#e6ad52; --warnBg:#3a2c14; --bad:#ff7d6e; --badBg:#3d1d1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1520; --surface:#172130; --surface2:#213043; --ink:#e6edf6; --muted:#95a6bc; --line:#2b3a50;
+  --band:#123a66; --bandInk:#ffffff; --blue:#62acf2; --red:#f0584a; --redInk:#ffffff;
+  --good:#53c98a; --goodBg:#163627; --warn:#e6ad52; --warnBg:#3a2c14; --bad:#ff7d6e; --badBg:#3d1d1a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{background:var(--band);color:var(--bandInk);padding-block:14px 0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top-in,.wrap{max-width:980px;margin:0 auto}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.brand span{font-size:13px;opacity:.8}
+.tabs{display:flex;gap:4px;margin-top:12px;overflow-x:auto}
+.tab{background:transparent;border:0;color:var(--bandInk);opacity:.75;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;border-radius:10px 10px 0 0;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
+.badge{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:10px;background:var(--red);color:var(--redInk);font-size:12px;line-height:20px;text-align:center}
+.wrap{padding-block:18px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.seg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:8px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.15);color:var(--blue)}
+select{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:10px;font-weight:600}
+.btn.primary{background:var(--red);border-color:var(--red);color:var(--redInk)}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:var(--bg)}
+.btn.big{font-family:var(--display);font-size:20px;letter-spacing:.06em;text-transform:uppercase;padding:12px 22px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.order-card{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--red);border-radius:12px;padding:12px 16px;margin-bottom:14px}
+.order-card .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.order-card .nm{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.05;text-transform:uppercase}
+.pill{display:inline-block;font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.05em;padding:2px 10px;border-radius:20px;background:var(--surface2);margin-left:6px;vertical-align:middle}
+.pill.red{background:var(--red);color:var(--redInk)}
+.station{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:760px){.station{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.board svg{width:100%;max-width:420px;display:block;margin:0 auto;height:auto}
+.panel h3{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.layers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.layers li{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:8px}
+.layers .n{font-family:var(--display);font-weight:700;color:var(--muted);text-align:center}
+.layers .a{font-weight:700}
+.ib{border:0;background:transparent;width:30px;height:30px;border-radius:6px;color:var(--muted);font-size:15px}
+.ib:hover{background:var(--surface)}
+.empty{color:var(--muted);font-size:14px;padding:10px 0}
+.rail{margin-top:16px}
+.rail-group{margin-bottom:12px}
+.rail-group h4{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px 6px 7px;font-size:14px;font-weight:600}
+.chip:hover{border-color:var(--blue)}
+.sw{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.25);flex:none}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.sheet-bg{position:fixed;inset:0;background:rgba(5,12,22,.5);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:18px 18px 0 0;padding-top:18px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));box-shadow:0 -6px 30px rgba(0,0,0,.25)}
+.sheet-in{max-width:560px;margin:0 auto}
+.sheet h2{font-family:var(--display);font-size:24px;text-transform:uppercase;margin:0 0 2px}
+.sheet p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.amts{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;margin-bottom:12px}
+.amt{border:2px solid var(--line);background:var(--surface2);border-radius:10px;padding:12px 4px;font-family:var(--display);font-weight:700;font-size:22px}
+.amt small{display:block;font-family:var(--body);font-size:11px;font-weight:600;color:var(--muted)}
+.amt:hover{border-color:var(--blue)}
+.result{margin-top:16px}
+.score{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.score .pct{font-family:var(--display);font-weight:800;font-size:56px;line-height:1}
+.score .verdict{font-family:var(--display);font-weight:700;font-size:22px;text-transform:uppercase}
+.stats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.stat{font-size:13px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--surface2)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.gstart td{border-top:2px dotted var(--red)}
+td.num,th.num{text-align:right;white-space:nowrap}
+.ok{color:var(--good);font-weight:700}.no{color:var(--bad);font-weight:700}
+.row-miss td{background:var(--badBg)}
+.row-extra td{background:var(--warnBg)}
+.v-good{color:var(--good)}.v-warn{color:var(--warn)}.v-bad{color:var(--bad)}
+.timer{font-family:var(--display);font-weight:800;font-size:40px;line-height:1}
+.rushbar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.rushbar .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.rushbar .v{font-family:var(--display);font-weight:700;font-size:26px}
+.setup{max-width:560px}
+.setup h2,.study-h{font-family:var(--display);font-size:28px;text-transform:uppercase;margin:0 0 6px}
+.setup p{color:var(--muted);margin:0 0 16px}
+.field{margin-bottom:14px}
+.field .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.card .nm{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;line-height:1.05}
+.card svg{width:100%;max-width:260px;margin:0 auto;display:block;height:auto}
+.card .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.key{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--blue);border-radius:14px;padding:14px 18px;margin-bottom:16px}
+.key h3{font-family:var(--display);font-size:20px;text-transform:uppercase;margin:0 0 8px}
+.key ul{margin:0;padding-left:18px}
+.key li{margin-bottom:4px;max-width:70ch}
+.review-list{display:flex;flex-direction:column;gap:8px}
+.review-item{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.review-item b{font-family:var(--display);font-size:19px;text-transform:uppercase}
+.muted{color:var(--muted)}
+.dcard{max-width:640px}
+.dcard .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.dq{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.15;margin:6px 0 14px;text-wrap:balance}
+.dopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dopt{border:2px solid var(--line);background:var(--surface2);border-radius:12px;padding:14px 8px;font-family:var(--display);font-weight:700;font-size:22px}
+.dopt:not(:disabled):hover{border-color:var(--blue)}
+.dopt:disabled{cursor:default}
+.dopt.correct{border-color:var(--good);background:var(--goodBg);color:var(--good)}
+.dopt.wrong{border-color:var(--bad);background:var(--badBg);color:var(--bad)}
+.dfb{margin-top:12px;font-weight:700}
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.chart td{font-size:13px}
+.hint{font-size:13px;color:var(--muted);margin-top:8px}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}}
+</style>
+</head>
+<body>
+<div class="top"><div class="top-in">
+  <div class="brand"><h1>Make Line Trainer</h1><span>Specialty pizzas, BYO, sandwiches, loaded chicken, pasta and breads from the store build cards</span></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+</div></div>
+<div class="wrap" id="app"></div>
+
+<script>
+// ---------- Ingredients ----------
+const ING={
+ pizzasauce:{n:'Pizza Sauce',g:'Sauces',u:'oz',c:'#c8382b'},
+ ranch:{n:'Ranch',g:'Sauces',u:'oz',c:'#f4f1e6'},
+ honeybbq:{n:'Honey BBQ',g:'Sauces',u:'oz',c:'#5a2a1c'},
+ alfredo:{n:'Alfredo Sauce',g:'Sauces',u:'oz',c:'#f6efd9'},
+ garlicparm:{n:'Garlic Parm',g:'Sauces',u:'oz',c:'#efe0ae'},
+ mangohab:{n:'Mango Habanero',g:'Sauces',u:'oz',c:'#e8892b'},
+ hotbuffalo:{n:'Hot Buffalo',g:'Sauces',u:'oz',c:'#d9532a'},
+ pizzacheese:{n:'Pizza Cheese',g:'Cheeses',u:'oz',c:'#f6e7b0'},
+ prov:{n:'Shredded Provolone',g:'Cheeses',u:'oz',c:'#fcf8ec'},
+ cheddar:{n:'Cheddar Cheese Blend',g:'Cheeses',u:'oz',c:'#f0a33a'},
+ feta:{n:'Feta',g:'Cheeses',u:'oz',c:'#ffffff'},
+ parm:{n:'Parm / Asiago',g:'Cheeses',u:'oz',c:'#efe4c4'},
+ american:{n:'American Cheese',g:'Cheeses',u:'slices',c:'#ffe7a3'},
+ pep:{n:'Pepperoni',g:'Meats',u:'pcs',c:'#b8322a'},
+ ham:{n:'Ham',g:'Meats',u:'pcs',c:'#f2a7a7'},
+ sausage:{n:'Sausage',g:'Meats',u:'oz',c:'#7b5b45'},
+ beef:{n:'Beef',g:'Meats',u:'oz',c:'#6a4632'},
+ bacon:{n:'Bacon',g:'Meats',u:'oz',c:'#c4524a'},
+ chicken:{n:'Chicken',g:'Meats',u:'oz',c:'#e9d1a8'},
+ steak:{n:'Philly Steak',g:'Meats',u:'oz',c:'#5d3b2b'},
+ onion:{n:'Onion',g:'Veggies',u:'oz',c:'#efe9d8'},
+ gp:{n:'Green Pepper',g:'Veggies',u:'oz',c:'#3a9a3e'},
+ mushroom:{n:'Mushroom',g:'Veggies',u:'oz',c:'#e8dccb'},
+ olive:{n:'Black Olive',g:'Veggies',u:'oz',c:'#1b1b1b'},
+ tomato:{n:'Tomato',g:'Veggies',u:'oz',c:'#e3452f'},
+ spinach:{n:'Spinach',g:'Veggies',u:'oz',c:'#2f6a33'},
+ pineapple:{n:'Pineapple',g:'Veggies',u:'oz',c:'#f3cf45'},
+ jalapeno:{n:'Jalapeño',g:'Veggies',u:'oz',c:'#6f9a3a'},
+ banana:{n:'Banana Pepper',g:'Veggies',u:'oz',c:'#f1d24a'},
+ greenchilies:{n:'Green Chilies',g:'Veggies',u:'oz',c:'#6aa84f'},
+ garlic:{n:'Garlic',g:'Veggies',u:'oz',c:'#e8dcb5'},
+ pasta:{n:'Pasta',g:'Bases',u:'oz',c:'#e8c77a'},
+ ident:{n:'Identifier Piece (on top)',g:'Finish & Post Bake',u:'pcs',c:'#d1372a'},
+ oregano:{n:'Oregano',g:'Finish & Post Bake',u:'oz',c:'#5a7a2e'},
+ garlicherb:{n:'Garlic Herb Shake-On',g:'Finish & Post Bake',u:'oz',c:'#c9a45a'},
+ hotbuffalo_post:{n:'Hot Buffalo (Post Bake)',g:'Finish & Post Bake',u:'oz',c:'#d9532a'}
+};
+const GROUPS=['Sauces','Cheeses','Meats','Veggies','Bases','Finish & Post Bake'];
+
+// ---------- Builds (from store build cards) ----------
+const SAUCE=[3,4.2,6,8],CH=[1.5,2.5,3.5,4.5],PROV=[2.5,3.5,4.7,6],H=[.5,1,1.5,2],O=[1,1.5,2,2.5],M=[12,18,24,38],CK=[2,3,4,5],UP=[16,24,32,46],HB=[.5,.7,1,1.2],OR=[.01,.02,.03,.04];
+const ITEMS=[
+ {cat:'pizza',id:'philly',name:'Philly Cheese Steak',tag:'4+ Top',
+  groups:[[['american',[4,6,7,9]]],[['steak',CK]],[['onion',H],['gp',H],['mushroom',O]],[['prov',PROV]]],
+  pan:[[['american',6]],[['steak',3]],[['onion',1],['gp',1]],[['mushroom',1.5]],[['prov',4]]]},
+ {cat:'pizza',id:'hawaiian',name:'Honolulu Hawaiian',tag:'4+ Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['ham',M]],[['bacon',O],['pineapple',O],['gp',H]],[['prov',PROV]]],
+  pan:[[['prov',4]],[['pizzasauce',3],['pizzacheese',3]],[['ham',18]],[['bacon',1.5],['pineapple',1.5]],[['gp',1]]]},
+ {cat:'pizza',id:'pacific',name:'Pacific Veggie',tag:'4+ Top',
+  groups:[[['pizzasauce',[1.5,3,4,4.5]],['pizzacheese',CH],['spinach',[1,1,1.5,2]]],[['prov',PROV],['feta',O],['onion',H]],[['mushroom',O],['olive',[.2,.5,.7,1]],['tomato',H]],[['garlicherb',[.02,.03,.04,.05]]]],
+  pan:[[['prov',4]],[['pizzasauce',1.5]],[['spinach',1]],[['pizzacheese',3]],[['feta',1.5]],[['onion',1]],[['mushroom',1.5]],[['olive',.5]],[['tomato',1]],[['garlicherb',.03]]]},
+ {cat:'pizza',id:'scbr',name:'Spicy Chicken Bacon Ranch',tag:'2-3 Top',
+  groups:[[['ranch',[1.5,3,4,5]],['pizzacheese',CH]],[['chicken',CK],['jalapeno',O]],[['bacon',[1.5,2,2.5,3.5]],['prov',PROV]],[['hotbuffalo_post',[1,1,1.5,2]]]],
+  pan:[[['prov',4]],[['ranch',3],['pizzacheese',3],['chicken',3]],[['jalapeno',1.5]],[['bacon',2]],[['hotbuffalo_post',1]]]},
+ {cat:'pizza',id:'memphis',name:'Memphis BBQ Chicken',tag:'2-3 Top',
+  groups:[[['honeybbq',[1.5,2.5,3.5,4.5]],['pizzacheese',CH]],[['chicken',CK],['onion',O]],[['prov',PROV],['cheddar',[1,2,2.5,3.5]]]],
+  pan:[[['prov',4]],[['honeybbq',3],['pizzacheese',3],['chicken',3]],[['onion',1.5]],[['cheddar',2]]]},
+ {cat:'pizza',id:'wisconsin',name:'Wisconsin 6 Cheese',tag:'4+ Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['feta',O],['prov',[1,2,2.5,3.5]],['cheddar',[1,2,2.5,3.5]]],[['parm',O],['oregano',OR]]],
+  pan:[[['prov',4]],[['pizzasauce',3],['pizzacheese',3]],[['feta',1.5]],[['cheddar',2]],[['parm',1.5]],[['oregano',.02]]]},
+ {cat:'pizza',id:'spinfeta',name:'Spinach & Feta',tag:'4+ Top',
+  groups:[[['pizzacheese',CH],['spinach',[1,1,1.5,2]]],[['feta',O],['onion',H]],[['prov',PROV],['parm',HB]],[['alfredo',[.7,1.5,2,2.5]]]],
+  pan:[[['prov',4]],[['pizzacheese',3]],[['spinach',1]],[['feta',1.5]],[['onion',1]],[['parm',.7]],[['alfredo',1.5]]]},
+ {cat:'pizza',id:'ultpep',name:'Ultimate Pepperoni',tag:'2-3 Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['pep',UP]],[['prov',PROV],['pep',UP]],[['parm',HB],['oregano',OR]]],
+  pan:[[['prov',4]],[['pizzasauce',3]],[['pep',24]],[['pizzacheese',3]],[['pep',24]],[['parm',.7]],[['oregano',.02]]]},
+ {cat:'pizza',id:'meatzza',name:'MeatZZa',tag:'4+ Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['pep',M],['ham',M]],[['sausage',O],['beef',O]],[['prov',PROV]]],
+  pan:[[['prov',4]],[['pizzasauce',3],['pizzacheese',3]],[['pep',18],['ham',18]],[['sausage',1.5],['beef',1.5]]]},
+ {cat:'pizza',id:'extrav',name:'ExtravaganZZa',tag:'4+ Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['pep',M],['ham',M]],[['onion',H],['gp',H],['mushroom',O],['olive',H]],[['sausage',O],['beef',O],['prov',PROV]]],
+  pan:[[['prov',4]],[['pizzasauce',3],['pizzacheese',3]],[['pep',18],['ham',18]],[['onion',1],['gp',1]],[['mushroom',1.5]],[['olive',1]],[['sausage',1.5],['beef',1.5]]]},
+ {cat:'pizza',id:'deluxe',name:"The People's Pizza – Deluxe",tag:'4+ Top',
+  groups:[[['pizzasauce',SAUCE],['pizzacheese',CH]],[['pep',M]],[['onion',H],['gp',H]],[['mushroom',O],['sausage',O],['prov',PROV]]],
+  pan:[[['prov',4]],[['pizzasauce',3],['pizzacheese',3]],[['pep',18]],[['onion',1],['gp',1]],[['mushroom',1.5],['sausage',1.5]]]},
+ {cat:'pizza',id:'sweetheat',name:'Sweet Heat Smokehouse',tag:'4+ Top',
+  groups:[[['honeybbq',[1.5,2.5,3.5,4.5]],['pizzacheese',CH]],[['onion',H],['pineapple',O],['jalapeno',H]],[['sausage',O],['bacon',O]],[['prov',PROV]]],
+  pan:[[['prov',4]],[['honeybbq',3],['pizzacheese',3]],[['onion',1]],[['pineapple',1.5]],[['jalapeno',1]],[['sausage',1.5],['bacon',1.5]]]},
+
+ {cat:'sandwich',id:'s-philly',name:'Philly Cheese Steak',tag:'Sandwich',
+  groups:[[['american',2]],[['steak',2.5]],[['mushroom',.7],['onion',.5],['gp',.5]],[['prov',1.5]]]},
+ {cat:'sandwich',id:'s-italian',name:'Italian',tag:'Sandwich',
+  groups:[[['pizzacheese',1]],[['pep',20],['ham',20]],[['onion',.5],['gp',.5],['banana',.5]],[['prov',1.5]]]},
+ {cat:'sandwich',id:'s-buffalo',name:'Buffalo Chicken',tag:'Sandwich',
+  groups:[[['hotbuffalo',.7],['ranch',1]],[['pizzacheese',1]],[['chicken',2.5],['onion',.5]],[['cheddar',1.5]]]},
+ {cat:'sandwich',id:'s-cbr',name:'Chicken Bacon Ranch',tag:'Sandwich',
+  groups:[[['ranch',1],['pizzacheese',1]],[['chicken',2.5]],[['bacon',.7]],[['prov',1.5]]]},
+ {cat:'sandwich',id:'s-parm',name:'Chicken Parm',tag:'Sandwich',
+  groups:[[['pizzasauce',1],['pizzacheese',1]],[['chicken',2.5]],[['parm',1]],[['prov',1.5]]]},
+
+ {cat:'chicken',id:'c-bbq',name:'Sweet BBQ Bacon',tag:'Loaded Chicken',
+  groups:[[['honeybbq',1.5],['pizzacheese',.7]],[['bacon',.7]],[['cheddar',.7]]]},
+ {cat:'chicken',id:'c-bt',name:'Crispy Bacon & Tomato',tag:'Loaded Chicken',
+  groups:[[['garlicparm',1.5],['pizzacheese',.7]],[['bacon',.7],['cheddar',.7]],[['tomato',.5]]]},
+ {cat:'chicken',id:'c-buff',name:'Classic Hot Buffalo',tag:'Loaded Chicken',
+  groups:[[['ranch',.5],['hotbuffalo',1]],[['pizzacheese',.7],['feta',.2]],[['cheddar',.7]],[['hotbuffalo_post',.5]]]},
+ {cat:'chicken',id:'c-jp',name:'Spicy Jalapeño & Pineapple',tag:'Loaded Chicken',
+  groups:[[['mangohab',1.5],['pizzacheese',.7]],[['pineapple',.7],['jalapeno',.5]],[['cheddar',.7]]]},
+
+ {cat:'pasta',id:'p-alfredo',name:'Chicken Alfredo',tag:'Pasta',
+  groups:[[['pasta',5.5]],[['chicken',2]],[['alfredo',4]]]},
+ {cat:'pasta',id:'p-mac',name:'5-Cheese Mac & Cheese',tag:'Pasta',note:'American: 2 slices cut into 4 triangles.',
+  groups:[[['pasta',5.5],['american',2]],[['parm',.2]],[['cheddar',2]],[['alfredo',4]]]},
+ {cat:'pasta',id:'p-buffmac',name:'Spicy Buffalo 5-Cheese Mac & Cheese',tag:'Pasta',note:'American: 2 slices cut into 4 triangles. Hot Buffalo goes on post bake.',
+  groups:[[['pasta',5.5],['american',2]],[['parm',.2]],[['cheddar',2]],[['alfredo',4]],[['hotbuffalo_post',.5]]]},
+
+ {cat:'bread',id:'b-cheese',name:'Stuffed Cheesy Bread – Cheese',tag:'Bread Side',
+  groups:[[['pizzacheese',1.5]],[['cheddar',3]]]},
+ {cat:'bread',id:'b-spinfeta',name:'Stuffed Cheesy Bread – Spinach & Feta',tag:'Bread Side',
+  groups:[[['pizzacheese',1.5]],[['spinach',.5],['feta',.5]],[['cheddar',3]],[['ident',1]]]},
+ {cat:'bread',id:'b-baconjal',name:'Stuffed Cheesy Bread – Bacon & Jalapeño',tag:'Bread Side',
+  groups:[[['pizzacheese',1.5]],[['bacon',1],['jalapeno',.7]],[['cheddar',3]],[['ident',1]]]},
+ {cat:'bread',id:'b-pep',name:'Stuffed Cheesy Bread – Pepperoni',tag:'Bread Side',note:'Pepperoni goes down in 2 rows of 7.',
+  groups:[[['pizzacheese',1.5]],[['pep',14]],[['cheddar',3]],[['ident',1]]]}
+];
+const CATS={pizza:'Specialty Pizza',byo:'Build Your Own',domino:'Domino',sandwich:'Sandwiches',chicken:'Loaded Chicken',pasta:'Pasta',bread:'Breads'};
+const BREAD_STEPS=['Stretch a Pan dough ball to 16" x 10" and cut it in half. Line a disk with a ½ sheet of 12" x 12" parchment and set one half on it.','Spread 1.5 oz pizza cheese evenly on the bottom half. Cheese only skips to the fold.','Add the toppings for the flavor (Spinach & Feta, Bacon & Jalapeño, or 14 pepperoni in 2 rows of 7).','Fold the top half over and match the corners.','Make 7 even cuts with a pizza cutter for 8 slices.','Spread 3 oz cheddar cheese blend edge to edge on top, then bake.','Topped flavors get one identifier on top: a small piece of spinach, a jalapeño, or 1 pepperoni.'];
+
+// ---------- Build Your Own charts (make-line stickers) ----------
+const TOPS={
+ pepham:{label:'Pepperoni & Ham (slices)',ings:['pep','ham'],t:{'1':{r:[20,30,40,54],x:[30,45,60,81]},'23':{r:[16,24,32,46],x:[24,36,48,69]},'4':{r:[12,18,24,38],x:[18,27,36,57]}}},
+ steakbacon:{label:'Philly Steak & Bacon',ings:['steak','bacon'],t:{'1':{r:[2,2.5,3.5,5],x:[3,3.7,5.2,7.5]},'23':{r:[1.5,2,2.5,3.5],x:[2.2,3,3.7,5.2]},'4':{r:[1,1.5,2,2.5],x:[1.5,2.2,3,3.7]}}},
+ meats:{label:'Sausage, Beef, Chicken, Mushroom, Pineapple, Tomato',ings:['sausage','beef','chicken','mushroom','pineapple','tomato'],t:{'1':{r:[2.5,3.5,5,6.5],x:[3.7,5.2,7.5,9.7]},'23':{r:[1.5,2.5,3.5,4.5],x:[2.2,3.7,5.2,6.7]},'4':{r:[1,1.5,2,2.5],x:[1.5,2.2,3,3.7]}}},
+ veg:{label:'Onion, Green Pepper, Olives, Banana Pepper, Jalapeño, Green Chilies',ings:['onion','gp','olive','banana','jalapeno','greenchilies'],t:{'1':{r:[1.5,2,3,4],x:[2.2,3,4.5,6]},'23':{r:[1,1.5,2,2.5],x:[1.5,2.2,3,3.7]},'4':{r:[.5,1,1.5,2],x:[.7,1.5,2.2,3]}}},
+ spinach:{label:'Spinach',ings:['spinach'],twoPlus:true,t:{'1':{r:[1.5,1.5,2,2.5],x:[2.2,2.2,3,3.7]},'23':{r:[1,1,1.5,2],x:[1.5,1.5,2.2,3]},'4':{r:[1,1,1.5,2],x:[1.5,1.5,2.2,3]}}},
+ garlic:{label:'Garlic',ings:['garlic'],t:{'1':{r:[.7,1,1.2,1.5],x:[1.1,1.5,1.8,2.2]},'23':{r:[.5,.7,1,1.2],x:[.7,1.1,1.5,1.8]},'4':{r:[.2,.5,.7,1],x:[.3,.7,1.1,1.5]}}}
+};
+const ALLPZ={cheddar:{label:'Cheddar Cheese Blend & Provolone',r:[1,2,2.5,3.5],x:[1.5,3,3.7,5.2]},prov:{label:'Cheddar Cheese Blend & Provolone',r:[1,2,2.5,3.5],x:[1.5,3,3.7,5.2]},
+ parm:{label:'Parmesan / Asiago',r:[1,1.5,2,2.5],x:[1.5,2.2,3,3.7]},feta:{label:'Feta',r:[1,1.5,2,2.5],x:[1.5,2.2,3,3.7]},american:{label:'American Cheese (slices)',r:[4,6,7,9],x:[6,9,10.5,13.5]}};
+const STD_SAUCE={pizzasauce:[3,4.2,6,8],alfredo:[1.5,3,4,5],garlicparm:[1.5,3,4,5],ranch:[1.5,3,4,5],honeybbq:[1.5,2.5,3.5,4.5]};
+const PV_SAUCE=[1.5,3,4,4.5];
+const HT_CHEESE={withR:[3.5,5,7,9],withX:[1.5,2.5,3.5,4.5],justR:[5,7.5,10.5,13.5],justX:[2,2.5,3.5,4.5]};
+const PAN={prov:4,sauce:3,pvSauce:1.5,withR:3,withX:1.5,justR:4.5,justX:3};
+const NY={sauce:[4.2,6,8],cheese:[2.5,3.5,4.5],prov:[3,4,5.5]}; // 12, 14, 16
+const CRUSTS={ht:'Hand Tossed',pan:'Pan',ny:'New York Style'};
+const countKey=n=>n<=1?'1':n<=3?'23':'4';
+const countLabel=k=>({'1':'1-topping','23':'2-3 topping','4':'4+ topping'})[k];
+function topPortion(ing,n,col,extra){
+  if(ALLPZ[ing])return ALLPZ[ing][extra?'x':'r'][col];
+  const g=Object.values(TOPS).find(g=>g.ings.includes(ing));
+  return g.t[countKey(n)][extra?'x':'r'][col];
+}
+const BYO_POOL=['pep','ham','steak','bacon','sausage','beef','chicken','mushroom','pineapple','tomato','onion','gp','olive','banana','jalapeno','greenchilies','spinach','garlic','cheddar','feta','parm'];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function makeByo(){
+  const r=Math.random(),crust=r<.6?'ht':r<.8?'pan':'ny';
+  const size=crust==='pan'?'pan':crust==='ny'?pick(['12','14','16']):pick(SIZES);
+  const n=Math.random()<.15?0:pick([1,1,2,2,3,3,4,5]);
+  const tops=BYO_POOL.slice().sort(()=>Math.random()-.5).slice(0,n).map(ing=>({ing,extra:Math.random()<.2}));
+  const xcheese=crust!=='ny'&&Math.random()<.18;
+  const sauce=crust==='pan'||Math.random()<.8?'pizzasauce':pick(['alfredo','ranch','honeybbq','garlicparm']);
+  const col=size==='pan'?1:SIZES.indexOf(size), nyc=['12','14','16'].indexOf(size);
+  const just=n===0, steps=[];let g=0;
+  const add=(ing,amt)=>steps.push({ing,amt,g});
+  if(crust==='ht'){add(sauce,STD_SAUCE[sauce][col]);add('pizzacheese',HT_CHEESE[just?'justR':'withR'][col]);g++}
+  else if(crust==='pan'){add('prov',PAN.prov);g++;add('pizzasauce',PAN.sauce);g++;add('pizzacheese',just?PAN.justR:PAN.withR);g++}
+  else{add(sauce,sauce==='pizzasauce'?NY.sauce[nyc]:STD_SAUCE[sauce][col]);g++;add('pizzacheese',NY.cheese[nyc]);g++;add('prov',NY.prov[nyc]);g++}
+  if(n){tops.forEach(t=>add(t.ing,topPortion(t.ing,n,col,t.extra)));g++}
+  if(xcheese)add('pizzacheese',crust==='pan'?(just?PAN.justX:PAN.withX):HT_CHEESE[just?'justX':'withX'][col]);
+  const desc=[ING[sauce].n,n?tops.map(t=>(t.extra?'Extra ':'')+ING[t.ing].n).join(', '):'Cheese only'];
+  if(xcheese)desc.push('Extra Cheese');
+  return{cat:'byo',id:'byo',name:'Build Your Own',tag:CRUSTS[crust],crust,size,steps,ticket:desc.join(' · '),countNote:n?countLabel(countKey(n)):'just cheese',headline:`${size==='pan'?'12"':size+'"'} ${CRUSTS[crust]}`};
+}
+
+// ---------- Domino (Detroit-style two-slice) ----------
+const DOM={prov:2,cheese:2,sauceR:2,sauceL:1.5,otherR:1,otherL:.7,cheeseOnly:1,
+  tops:{1:{r:[12,1.5],l:[9,1.1],x:[18,2.2]},2:{r:[9,1],l:[7,.7],x:[14,1.5]},3:{r:[6,.7],l:[4,.5]}}};
+const DOM_POOL=['pep','ham','sausage','beef','bacon','chicken','steak','mushroom','onion','gp','olive','pineapple','jalapeno','banana','tomato','spinach','pizzacheese'];
+function domTop(ing,n,p){return DOM.tops[n][p][ing==='pep'||ing==='ham'?0:1]}
+function makeDomino(){
+  const n=Math.random()<.15?0:pick([1,1,2,2,3,3]);
+  const tops=DOM_POOL.slice().sort(()=>Math.random()-.5).slice(0,n).map(ing=>{
+    const r=Math.random();let p=r<.7?'r':r<.85?'l':'x';if(n===3&&p==='x')p='r';if(ing==='pizzacheese')p='r';return{ing,p}});
+  const sauce=Math.random()<.75?'pizzasauce':pick(['alfredo','ranch','honeybbq','garlicparm']);
+  const light=Math.random()<.2;
+  const steps=[{ing:'prov',amt:DOM.prov,g:0},{ing:'pizzacheese',amt:DOM.cheese,g:0},
+    {ing:sauce,amt:sauce==='pizzasauce'?(light?DOM.sauceL:DOM.sauceR):(light?DOM.otherL:DOM.otherR),g:1}];
+  if(n===0)steps.push({ing:'pizzacheese',amt:DOM.cheeseOnly,g:2});
+  tops.forEach(t=>steps.push({ing:t.ing,amt:domTop(t.ing,n,t.p),g:2}));
+  const pl={r:'',l:'Light ',x:'Extra '};
+  const desc=[(light?'Light ':'')+ING[sauce].n,n?tops.map(t=>t.ing==='pizzacheese'?'Extra Cheese':pl[t.p]+ING[t.ing].n).join(', '):'Cheese only'];
+  return{cat:'domino',id:'domino',name:'Domino',tag:'Detroit Style',size:'-',steps,ticket:desc.join(' · '),countNote:n?n+'-topping':'cheese only',headline:'Domino'};
+}
+function dominoValues(ing){
+  const v=[];Object.values(DOM.tops).forEach(t=>Object.values(t).forEach(a=>v.push(ing==='pep'||ing==='ham'?a[0]:a[1])));
+  if(ing==='pizzasauce')v.push(DOM.sauceR,DOM.sauceL);
+  if(['alfredo','ranch','honeybbq','garlicparm','hotbuffalo','mangohab'].includes(ing))v.push(DOM.otherR,DOM.otherL,1.5,2);
+  if(ing==='prov'||ing==='pizzacheese')v.push(2,1);
+  return [...new Set(v)];
+}
+const SIZES=['10','12','14','16'];
+const SIZE_OPTS=['10','12','14','16','pan'];
+
+// ---------- Helpers ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eq=(a,b)=>Math.abs(a-b)<1e-6;
+const itemById=id=>ITEMS.find(i=>i.id===id);
+const sizeLabel=s=>s==='pan'?'12" Pan':s==='-'?'':s+'"';
+function fmt(a,ing){const u=ING[ing].u;if(u!=='oz')return String(a);return a<0.1?a.toFixed(2):(Math.round(a*10)/10).toFixed(1)}
+const unit=ing=>ING[ing].u;
+function stepsFor(item,size){
+  if(item.steps)return item.steps;
+  let src;
+  if(item.cat==='pizza') src=size==='pan'?item.pan:item.groups.map(g=>g.map(([i,a])=>[i,a[SIZES.indexOf(size)]]));
+  else src=item.groups;
+  const out=[];src.forEach((g,gi)=>g.forEach(([ing,amt])=>out.push({ing,amt,g:gi})));return out;
+}
+const keyOf=(item,size)=>item.id+'|'+(item.cat==='pizza'?size:'-');
+
+// amounts seen per category, used for the portion picker
+const AMTS={};
+ITEMS.forEach(it=>{const c=AMTS[it.cat]||(AMTS[it.cat]={});const sizes=it.cat==='pizza'?[...SIZES,'pan']:['-'];
+  sizes.forEach(s=>stepsFor(it,s).forEach(st=>{(c[st.ing]||(c[st.ing]=new Set())).add(st.amt)}))});
+function byoValues(ing,size){
+  const col=size==='pan'?1:SIZES.indexOf(size),nyc=['12','14','16'].indexOf(size),v=[];
+  const g=Object.values(TOPS).find(g=>g.ings.includes(ing));
+  if(g)Object.values(g.t).forEach(t=>v.push(t.r[col],t.x[col]));
+  if(ALLPZ[ing])v.push(ALLPZ[ing].r[col],ALLPZ[ing].x[col]);
+  if(STD_SAUCE[ing])v.push(STD_SAUCE[ing][col]);
+  if(ing==='pizzasauce'){v.push(PAN.sauce,PV_SAUCE[col]);if(nyc>=0)v.push(NY.sauce[nyc])}
+  if(ing==='pizzacheese'){Object.values(HT_CHEESE).forEach(a=>v.push(a[col]));v.push(PAN.withR,PAN.justR,PAN.withX,PAN.justX);if(nyc>=0)v.push(NY.cheese[nyc])}
+  if(ing==='prov'){v.push(PAN.prov);if(nyc>=0)v.push(NY.prov[nyc])}
+  return [...new Set(v)];
+}
+function options(ing,cat,size){
+  let s=AMTS[cat]&&AMTS[cat][ing]?[...AMTS[cat][ing]]:[];
+  if(cat==='byo')s=byoValues(ing,size);
+  if(cat==='domino')s=dominoValues(ing);
+  if(!s.length){Object.values(AMTS).forEach(c=>{if(c[ing])s.push(...c[ing])});s=[...new Set(s)]}
+  const u=unit(ing);
+  const ladder=u!=='oz'?[2,4,6,7,9,12,16,18,20,24,32,38,46]:(ing==='oregano'||ing==='garlicherb')?[.01,.02,.03,.04,.05]:[.2,.5,.7,1,1.5,2,2.5,3,3.5,4,4.5,5,6];
+  const mid=s.length?s.slice().sort((a,b)=>a-b)[Math.floor(s.length/2)]:ladder[3];
+  while(s.length<5){const c=ladder.filter(v=>!s.some(x=>eq(x,v))).sort((a,b)=>Math.abs(a-mid)-Math.abs(b-mid))[0];if(c===undefined)break;s.push(c)}
+  return s.sort((a,b)=>a-b);
+}
+
+// ---------- Storage ----------
+let STORE={missed:{},best:{},rushBest:0};
+try{const r=localStorage.getItem('mlt.v1');if(r)STORE=Object.assign(STORE,JSON.parse(r))}catch(e){}
+function save(){try{localStorage.setItem('mlt.v1',JSON.stringify(STORE))}catch(e){}}
+function record(item,size,pct){if(item.ticket)return;const k=keyOf(item,size);if(pct>=100)delete STORE.missed[k];else STORE.missed[k]={pct,t:Date.now()};
+  STORE.best[k]=Math.max(STORE.best[k]||0,pct);save()}
+
+// ---------- Grading ----------
+function grade(req,user){
+  const used=user.map(()=>false);const rows=req.map(r=>{
+    let i=user.findIndex((u,j)=>!used[j]&&u.ing===r.ing&&eq(u.amt,r.amt));
+    if(i<0)i=user.findIndex((u,j)=>!used[j]&&u.ing===r.ing);
+    if(i>=0){used[i]=true;return{r,ui:i,got:user[i].amt,portion:eq(user[i].amt,r.amt),order:false}}
+    return{r,ui:-1,got:null,portion:false,order:false};
+  });
+  // order: longest non-decreasing run of step groups in the order you placed them
+  const m=rows.filter(x=>x.ui>=0).sort((a,b)=>a.ui-b.ui);
+  const L=m.map(()=>1),P=m.map(()=>-1);
+  for(let i=0;i<m.length;i++)for(let j=0;j<i;j++)if(m[j].r.g<=m[i].r.g&&L[j]+1>L[i]){L[i]=L[j]+1;P[i]=j}
+  let bi=-1,bv=0;L.forEach((v,i)=>{if(v>bv){bv=v;bi=i}});
+  while(bi>=0){m[bi].order=true;bi=P[bi]}
+  const extras=user.map((u,j)=>used[j]?null:{...u,pos:j}).filter(Boolean);
+  const n=req.length,found=rows.filter(x=>x.ui>=0).length,por=rows.filter(x=>x.portion).length,ord=rows.filter(x=>x.order).length;
+  const earned=Math.max(0,found+por+ord-extras.length);
+  const pct=Math.round(earned/(3*n)*100);
+  return{rows,extras,n,found,por,ord,pct};
+}
+function verdict(p){if(p>=100)return['Perfect build','v-good'];if(p>=90)return['Store ready','v-good'];if(p>=75)return['Close, check the misses','v-warn'];return['Remake it','v-bad']}
+
+// ---------- Drawing ----------
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const DENS={pizzacheese:28,prov:28,cheddar:30,parm:45,feta:28,sausage:14,beef:20,bacon:18,chicken:9,steak:10,onion:18,gp:12,mushroom:8,olive:28,tomato:15,spinach:13,pineapple:12,jalapeno:10,banana:14,garlic:40,greenchilies:18,pasta:6};
+let uid=0;
+function pt(cat,r){
+  if(cat==='pizza'){const a=r()*Math.PI*2,d=Math.sqrt(r())*116;return[150+Math.cos(a)*d,150+Math.sin(a)*d]}
+  if(cat==='pasta'){const a=r()*Math.PI*2,d=Math.sqrt(r())*108;return[150+Math.cos(a)*d,150+Math.sin(a)*d]}
+  if(cat==='bread')return[48+r()*204,80+r()*140];
+  if(cat==='domino')return[34+r()*232,88+r()*124];
+  if(cat==='sandwich'){const left=r()<.5;return[(left?42:166)+r()*92,42+r()*216]}
+  return[34+r()*232,58+r()*186];
+}
+function shred(c,len){return `<line x1="${-len/2}" y1="0" x2="${len/2}" y2="0" stroke="#d9cfb2" stroke-width="3.6" stroke-linecap="round"/><line x1="${-len/2}" y1="0" x2="${len/2}" y2="0" stroke="${c}" stroke-width="2.3" stroke-linecap="round"/>`}
+function sprite(ing,r){
+  switch(ing){
+    case 'pep':return `<circle r="11" fill="#b5302a" stroke="#8e2219" stroke-width="1.2"/><circle cx="-3" cy="-2" r="1.6" fill="#e9a08c"/><circle cx="4" cy="3" r="1.3" fill="#e9a08c"/>`;
+    case 'ham':return `<path d="M-6 0 L10 -8 A14 14 0 0 1 10 8 Z" fill="#f2a9ab" stroke="#d98a8d" stroke-width=".8"/>`;
+    case 'sausage':return `<circle r="5.5" fill="#7b5b45"/><circle cx="-1.5" cy="-1.5" r="2" fill="#9c7a62"/>`;
+    case 'beef':return `<path d="M-3 -2 L1 -4 L4 -1 L2 3 L-3 3 Z" fill="#6a4632"/>`;
+    case 'bacon':return `<rect x="-4.5" y="-2.5" width="9" height="5" rx="1" fill="#c4524a"/><rect x="-4.5" y="-.6" width="9" height="1.4" fill="#f0b9a8"/>`;
+    case 'chicken':return `<rect x="-7" y="-4.5" width="14" height="9" rx="3" fill="#e9d1a8" stroke="#c4a57a" stroke-width=".8"/>`;
+    case 'steak':return `<ellipse rx="9" ry="3.6" fill="#5d3b2b"/>`;
+    case 'onion':return `<path d="M-7 2 Q0 -7 7 2" stroke="#cfc6ae" stroke-width="3.4" fill="none" stroke-linecap="round"/><path d="M-7 2 Q0 -7 7 2" stroke="#f6f2e6" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    case 'gp':return `<rect x="-8" y="-2.3" width="16" height="4.6" rx="2.3" fill="#3a9a3e" stroke="#25702a" stroke-width=".6"/>`;
+    case 'mushroom':return `<path d="M-7 1 Q-7 -7 0 -7 Q7 -7 7 1 Z" fill="#efe4d4" stroke="#9b7b60" stroke-width="1"/><rect x="-2" y="1" width="4" height="5" fill="#efe4d4" stroke="#9b7b60" stroke-width="1"/>`;
+    case 'olive':return `<circle r="4.5" fill="none" stroke="#1b1b1b" stroke-width="3"/>`;
+    case 'tomato':return `<rect x="-4" y="-4" width="8" height="8" rx="1.5" fill="#e3452f"/>`;
+    case 'spinach':return `<ellipse rx="10" ry="5.5" fill="#2f6a33"/><line x1="-9" y1="0" x2="9" y2="0" stroke="#4f8a4f" stroke-width="1"/>`;
+    case 'pineapple':return `<rect x="-4.5" y="-3.5" width="9" height="7" rx="1.5" fill="#f3cf45" stroke="#d1a520" stroke-width=".8"/>`;
+    case 'jalapeno':return `<circle r="5.5" fill="#b4cf78" stroke="#3f6b23" stroke-width="2.2"/><circle cx="-1.5" cy="0" r=".9" fill="#f3f0d0"/><circle cx="1.6" cy="1" r=".9" fill="#f3f0d0"/>`;
+    case 'banana':return `<path d="M-6 0 A6 6 0 1 1 6 0" stroke="#e8c53a" stroke-width="3" fill="none"/>`;
+    case 'feta':return `<rect x="-2.2" y="-2.2" width="4.4" height="4.4" fill="#fffef8" stroke="#cfc9b6" stroke-width=".7"/>`;
+    case 'parm':return `<line x1="-2.6" y1="0" x2="2.6" y2="0" stroke="#e6d6a8" stroke-width="1.3" stroke-linecap="round"/>`;
+    case 'pizzacheese':return shred('#f8ecc0',11);
+    case 'prov':return shred('#fffcf2',12);
+    case 'cheddar':return shred('#f0a33a',12);
+    case 'american':return `<rect x="-15" y="-15" width="30" height="30" fill="#ffe7a3" stroke="#e6c46c" stroke-width="1" opacity=".92"/>`;
+    case 'garlic':return `<circle r="1.5" fill="#efe6c6" stroke="#c7b787" stroke-width=".5"/>`;
+    case 'greenchilies':return `<rect x="-3" y="-2" width="6" height="4" rx="1" fill="#6aa84f" stroke="#3f7a2c" stroke-width=".6"/>`;
+    case 'pasta':return `<rect x="-8" y="-3.2" width="16" height="6.4" rx="2" fill="#e8c77a" stroke="#c39a45" stroke-width="1"/><line x1="-4" y1="-3" x2="-4" y2="3" stroke="#c39a45" stroke-width=".6"/><line x1="2" y1="-3" x2="2" y2="3" stroke="#c39a45" stroke-width=".6"/>`;
+    case 'ident':return `<circle r="13" fill="none" stroke="#d1372a" stroke-width="2.5" stroke-dasharray="4 3"/><circle r="5" fill="#b5302a"/>`;
+    case 'oregano':return `<circle r="1.2" fill="#5a7a2e"/>`;
+    case 'garlicherb':return `<circle r="1.2" fill="${r()<.5?'#c39a4c':'#6d8a3a'}"/>`;
+  }
+  return '';
+}
+function countFor(ing,amt){
+  const u=unit(ing);
+  if(u!=='oz')return Math.round(amt);
+  if(ing==='oregano'||ing==='garlicherb')return Math.round(70*amt/0.03);
+  return Math.min(240,Math.max(2,Math.round((DENS[ing]||12)*amt)));
+}
+function drawSvg(cat,layers,size){
+  if(cat==='byo')cat='pizza';
+  const id='c'+(++uid);let base='',clip='';
+  if(cat==='pasta'){
+    clip=`<clipPath id="${id}"><circle cx="150" cy="150" r="118"/></clipPath>`;
+    base=`<circle cx="150" cy="150" r="140" fill="#aab1ba"/><circle cx="150" cy="150" r="130" fill="#cfd4da" stroke="#9aa2ad" stroke-width="2" stroke-dasharray="3 3"/><circle cx="150" cy="150" r="120" fill="#e3e6ea"/>`;
+  }else if(cat==='domino'){
+    clip=`<clipPath id="${id}"><rect x="28" y="82" width="244" height="136" rx="10"/></clipPath>`;
+    base=`<rect x="16" y="70" width="268" height="160" rx="16" fill="#3b3f45"/><rect x="22" y="76" width="256" height="148" rx="12" fill="#d9a85c"/><rect x="28" y="82" width="244" height="136" rx="10" fill="#f1dcae"/><line x1="150" y1="78" x2="150" y2="222" stroke="#3b3f45" stroke-width="3"/>`;
+  }else if(cat==='bread'){
+    clip=`<clipPath id="${id}"><rect x="40" y="72" width="220" height="156" rx="16"/></clipPath>`;
+    base=`<rect x="20" y="52" width="260" height="196" rx="8" fill="#ece6d6" stroke="#cfc6ae"/><rect x="32" y="64" width="236" height="172" rx="20" fill="#dcb874"/><rect x="40" y="72" width="220" height="156" rx="16" fill="#f1dcae"/>`;
+    for(let k=1;k<8;k++)base+=`<line x1="${40+k*27.5}" y1="74" x2="${40+k*27.5}" y2="226" stroke="#d2b47e" stroke-width="1.2" stroke-dasharray="4 4"/>`;
+  }else if(cat==='pizza'){
+    const pan=size==='pan';
+    clip=`<clipPath id="${id}"><circle cx="150" cy="150" r="124"/></clipPath>`;
+    base=`<circle cx="150" cy="150" r="146" fill="${pan?'#d9a85c':'#e8c98f'}"/><circle cx="150" cy="150" r="${pan?132:136}" fill="#f1dcae"/><circle cx="150" cy="150" r="126" fill="#f4e2bb"/>`;
+  }else if(cat==='sandwich'){
+    clip=`<clipPath id="${id}"><rect x="34" y="30" width="108" height="240" rx="38"/><rect x="158" y="30" width="108" height="240" rx="38"/></clipPath>`;
+    base=`<rect x="28" y="24" width="120" height="252" rx="44" fill="#d9b67a"/><rect x="152" y="24" width="120" height="252" rx="44" fill="#d9b67a"/><rect x="34" y="30" width="108" height="240" rx="38" fill="#f1e2c2"/><rect x="158" y="30" width="108" height="240" rx="38" fill="#f1e2c2"/>`;
+  }else{
+    clip=`<clipPath id="${id}"><rect x="22" y="46" width="256" height="208" rx="10"/></clipPath>`;
+    base=`<rect x="14" y="38" width="272" height="224" rx="14" fill="#8a8f96"/><rect x="22" y="46" width="256" height="208" rx="10" fill="#ece9e2"/>`;
+    const r=rng(7);for(let row=0;row<4;row++)for(let col=0;col<5;col++){const x=50+col*50+(r()-.5)*8,y=78+row*48+(r()-.5)*8;
+      base+=`<ellipse cx="${x}" cy="${y}" rx="22" ry="17" fill="#c98a3c" stroke="#a66b26" stroke-width="1.2" transform="rotate(${(r()-.5)*30} ${x} ${y})"/>`}
+  }
+  const sc=cat==='pizza'?1:.75;let body='';
+  layers.forEach((L,li)=>{
+    const r=rng(li*977+L.ing.length*131+Math.round(L.amt*100));
+    const spread=cat==='pizza'&&(L.ing==='pizzasauce'||L.ing==='ranch');
+    const isSauce=ING[L.ing].g==='Sauces'||L.ing==='hotbuffalo_post';
+    if(spread){body+=`<circle cx="150" cy="150" r="122" fill="${ING[L.ing].c}" opacity=".93"/>`;return}
+    if(isSauce){
+      const lines=Math.max(3,Math.min(12,Math.round(L.amt*(cat==='pizza'?3:6))));
+      const top=cat==='chicken'?60:34,bot=cat==='chicken'?244:266,step=(bot-top)/lines;let d='';
+      for(let k=0;k<lines;k++){const y=top+step*(k+.5);d+=`M10 ${y.toFixed(1)}`;for(let x=10;x<=290;x+=20)d+=` Q${x+10} ${(y+(k%2?-9:9)).toFixed(1)} ${x+20} ${y.toFixed(1)}`}
+      body+=`<path d="${d}" fill="none" stroke="${ING[L.ing].c}" stroke-width="${cat==='pizza'?4.5:4}" stroke-linecap="round" opacity=".95"/>`;
+      if(L.ing==='ranch'||L.ing==='alfredo'||L.ing==='garlicparm')body=body.replace(/opacity=".95"\/>$/,`opacity=".95" style="filter:drop-shadow(0 0 .6px #9b8f70)"/>`);
+      return;
+    }
+    const n=countFor(L.ing,L.amt);
+    for(let k=0;k<n;k++){const[x,y]=pt(cat,r);body+=`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${Math.round(r()*360)}) scale(${sc})">${sprite(L.ing,r)}</g>`}
+  });
+  return `<svg viewBox="0 0 300 300" role="img" aria-label="Current build"><defs>${clip}</defs>${base}<g clip-path="url(#${id})">${body}</g></svg>`;
+}
+
+// ---------- State ----------
+let tab='build';
+let P={cat:'pizza',item:'philly',size:'14'};               // practice picker
+let B={mode:'practice',item:itemById('philly'),size:'14',layers:[],result:null}; // the active build
+let sheet=null;                                             // ingredient being portioned
+let R={phase:'setup',cat:'all',dur:180,remaining:0,last:0,builds:0,perfect:0,sum:0,timer:null};
+let V={phase:'list',queue:[],i:0,cleared:0,done:0};
+let flipped={};let studyCat='pizza';
+
+function randomTarget(cat){
+  if(cat==='byo'||(cat==='all'&&Math.random()<.2)){const b=makeByo();return{item:b,size:b.size}}
+  if(cat==='domino'||(cat==='all'&&Math.random()<.1)){const d=makeDomino();return{item:d,size:d.size}}
+  const pool=ITEMS.filter(i=>cat==='all'||i.cat===cat);const it=pool[Math.floor(Math.random()*pool.length)];
+  return{item:it,size:it.cat==='pizza'?SIZE_OPTS[Math.floor(Math.random()*5)]:'-'};
+}
+function loadBuild(item,size,mode){B={mode,item,size,layers:[],result:null};sheet=null}
+
+// ---------- Views ----------
+function renderTabs(){
+  const miss=Object.keys(STORE.missed).length;
+  const t=[['build','Build'],['rush','Timed Rush'],['drill','Portion Drill'],['study','Study Cards'],['review','Missed Review']];
+  $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${tab===k}" data-a="tab" data-v="${k}">${l}${k==='review'&&miss?`<span class="badge">${miss}</span>`:''}</button>`).join('');
+}
+function builderHTML(){
+  const it=B.item,req=stepsFor(it,B.size);
+  const head=it.ticket
+    ?`<div class="order-card"><div style="min-width:0"><div class="lbl">Order ticket</div><div class="nm">${esc(it.headline)}<span class="pill">${esc(it.countNote)}</span></div><div style="font-weight:600;margin-top:4px">${esc(it.ticket)}</div></div><div class="muted" style="font-size:13px">Use the make-line charts</div></div>`
+    :`<div class="order-card"><div><div class="lbl">Now building</div><div class="nm">${esc(it.name)}${B.size!=='-'?`<span class="pill red">${sizeLabel(B.size)}</span>`:''}<span class="pill">${esc(it.tag)}</span></div></div><div class="muted" style="font-size:13px">${req.length} steps on the card</div></div>`;
+  const layers=B.layers.length?`<ul class="layers">${B.layers.map((L,i)=>`<li><span class="n">${i+1}</span><span>${esc(ING[L.ing].n)}</span><span class="a">${fmt(L.amt,L.ing)} ${unit(L.ing)}</span>
+    ${B.result?'<span></span><span></span>':`<button class="ib" aria-label="Move up" data-a="up" data-v="${i}" ${i===0?'disabled':''}>▲</button><button class="ib" aria-label="Remove" data-a="rm" data-v="${i}">✕</button>`}</li>`).join('')}</ul>`
+    :`<div class="empty">Nothing on the ${({pizza:'dough',byo:'dough',domino:'dough',bread:'dough',sandwich:'bread',pasta:'tin'})[it.cat]||'tray'} yet. Tap ingredients below in the order you would add them.</div>`;
+  let lower='';
+  if(!B.result){
+    lower=`<div class="panel rail">${GROUPS.map(g=>`<div class="rail-group"><h4>${g}</h4><div class="chips">${Object.entries(ING).filter(([,v])=>v.g===g).map(([k,v])=>`<button class="chip" data-a="pick" data-v="${k}"><span class="sw" style="background:${v.c}"></span>${esc(v.n)}</button>`).join('')}</div></div>`).join('')}
+      <div class="actions"><button class="btn primary big" data-a="submit" ${B.layers.length?'':'disabled'}>Grade build</button><button class="btn" data-a="clear" ${B.layers.length?'':'disabled'}>Clear</button>${B.mode==='rush'?'<button class="btn" data-a="skip">Skip</button>':''}</div>
+      <div class="hint">Grading: 1 point for each ingredient on the card, 1 for the right portion, 1 for adding it in the right step. Extra ingredients take a point off.</div></div>`;
+  }else lower=resultHTML();
+  return `${head}<div class="station"><div class="panel board">${drawSvg(it.cat,B.layers,B.size)}</div><div class="panel"><h3>Your build</h3>${layers}</div></div>${lower}`;
+}
+function resultHTML(){
+  const g=B.result,[vt,vc]=verdict(g.pct),it=B.item;
+  let rows='';let lastG=-1;
+  g.rows.forEach(x=>{const r=x.r;const gs=r.g!==lastG&&lastG!==-1;lastG=r.g;
+    rows+=`<tr class="${gs?'gstart ':''}${x.ui<0?'row-miss':''}"><td>${r.g+1}</td><td>${esc(ING[r.ing].n)}</td><td class="num">${x.ui<0?'<span class="no">Missing</span>':`<span class="${x.portion?'ok':'no'}">${fmt(x.got,r.ing)}</span>`}</td><td class="num">${fmt(r.amt,r.ing)} ${unit(r.ing)}</td><td>${x.ui<0?'–':x.order?'<span class="ok">✓</span>':'<span class="no">Out of order</span>'}</td></tr>`});
+  g.extras.forEach(e=>{rows+=`<tr class="row-extra"><td>+</td><td>${esc(ING[e.ing].n)}</td><td class="num"><span class="no">${fmt(e.amt,e.ing)}</span></td><td class="num">Not on card</td><td>–</td></tr>`});
+  let btns='';
+  if(B.mode==='practice')btns=`<button class="btn primary" data-a="retry">Try again</button><button class="btn" data-a="nextRandom">Random next</button>`;
+  else if(B.mode==='rush')btns=`<button class="btn primary big" data-a="rushNext">Next build</button><button class="btn" data-a="rushEnd">End rush</button>`;
+  else btns=`<button class="btn primary big" data-a="reviewNext">${V.i+1<V.queue.length?'Next missed build':'Finish review'}</button>`;
+  return `<div class="panel result"><div class="score"><div class="pct ${vc}">${g.pct}%</div><div><div class="verdict ${vc}">${vt}</div><div class="muted">${esc(it.name)} ${sizeLabel(B.size)}</div></div></div>
+    <div class="stats"><span class="stat">Ingredients ${g.found}/${g.n}</span><span class="stat">Portions ${g.por}/${g.n}</span><span class="stat">Order ${g.ord}/${g.n}</span><span class="stat">Extras ${g.extras.length}</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Ingredient</th><th class="num">Yours</th><th class="num">Card</th><th>Order</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="hint">Ingredients in the same step can go on in any order. Dotted lines mark a new step on the card.</div>
+    <div class="actions">${btns}</div></div>`;
+}
+function practiceControls(){
+  const items=ITEMS.filter(i=>i.cat===P.cat);
+  const seg=`<div class="seg">${Object.entries(CATS).map(([k,l])=>`<button aria-pressed="${P.cat===k}" data-a="pcat" data-v="${k}">${l}</button>`).join('')}</div>`;
+  if(P.cat==='byo'||P.cat==='domino')return `<div class="controls">${seg}<button class="btn" data-a="nextRandom">New ticket</button></div>`;
+  return `<div class="controls">${seg}
+   <select id="pitem" aria-label="Item" data-a="pitem">${items.map(i=>`<option value="${i.id}" ${i.id===P.item?'selected':''}>${esc(i.name)}</option>`).join('')}</select>
+   ${P.cat==='pizza'?`<div class="seg">${SIZE_OPTS.map(s=>`<button aria-pressed="${P.size===s}" data-a="psize" data-v="${s}">${sizeLabel(s)}</button>`).join('')}</div>`:''}
+   <button class="btn" data-a="nextRandom">Random</button></div>`;
+}
+function sheetHTML(){
+  if(!sheet)return '';const ing=sheet;const opts=options(ing,B.item.cat,B.size);
+  const what=B.item.ticket?`${B.item.headline} (${B.item.countNote})`:`${B.item.name} ${sizeLabel(B.size)}`;
+  return `<div class="sheet-bg" data-a="close"></div><div class="sheet" role="dialog" aria-label="Choose portion"><div class="sheet-in">
+   <h2>${esc(ING[ing].n)}</h2><p>How much goes on this ${esc(what)}?</p>
+   <div class="amts">${opts.map(a=>`<button class="amt" data-a="add" data-v="${a}">${fmt(a,ing)}<small>${unit(ing)}</small></button>`).join('')}</div>
+   <button class="btn" data-a="close">Cancel</button></div></div>`;
+}
+function rushHTML(){
+  if(R.phase==='setup'){
+    return `<div class="setup"><h2>Timed Rush</h2><p>Build as many items as you can before the clock runs out. The clock pauses while you read each result.${STORE.rushBest?` Best so far: ${STORE.rushBest} perfect builds.`:''}</p>
+     <div class="field"><div class="lbl">Menu</div><div class="seg">${[['all','Everything'],...Object.entries(CATS)].map(([k,l])=>`<button aria-pressed="${R.cat===k}" data-a="rcat" data-v="${k}">${l}</button>`).join('')}</div></div>
+     <div class="field"><div class="lbl">Clock</div><div class="seg">${[[120,'2 min'],[180,'3 min'],[300,'5 min']].map(([k,l])=>`<button aria-pressed="${R.dur===k}" data-a="rdur" data-v="${k}">${l}</button>`).join('')}</div></div>
+     <button class="btn primary big" data-a="rushStart">Start rush</button></div>`;
+  }
+  const avg=R.builds?Math.round(R.sum/R.builds):0;
+  const bar=`<div class="rushbar"><div><div class="k">Time left</div><div class="timer" id="rtime">${clock(R.remaining)}</div></div><div><div class="k">Builds</div><div class="v">${R.builds}</div></div><div><div class="k">Perfect</div><div class="v">${R.perfect}</div></div><div><div class="k">Avg accuracy</div><div class="v">${avg}%</div></div></div>`;
+  if(R.phase==='done'){
+    return `<div class="setup"><h2>Rush over</h2>${bar}<p>${R.perfect>=STORE.rushBest&&R.perfect>0?'New best for perfect builds.':'Every build under 100% went into Missed Review.'}</p><button class="btn primary big" data-a="rushAgain">Run it again</button></div>`;
+  }
+  return bar+builderHTML();
+}
+function clock(ms){const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function studyHTML(){
+  const items=ITEMS.filter(i=>i.cat===studyCat);
+  const catSeg=`<div class="controls"><div class="seg">${Object.entries(CATS).map(([k,l])=>`<button aria-pressed="${studyCat===k}" data-a="scat" data-v="${k}">${l}</button>`).join('')}</div></div>`;
+  if(studyCat==='byo')return catSeg+byoChartsHTML();
+  if(studyCat==='domino')return catSeg+dominoChartsHTML();
+  const breadKey=`<div class="key"><h3>Stuffed Cheesy Bread procedure</h3><ol style="margin:0;padding-left:20px">${BREAD_STEPS.map(s=>`<li style="margin-bottom:4px;max-width:70ch">${esc(s)}</li>`).join('')}</ol></div>`;
+  const key=studyCat==='bread'?breadKey:studyCat==='pizza'?`<div class="key"><h3>Card key</h3><ul>
+    <li><b>No symbol</b> means use BYO portions. On Pan, follow the 4-3-3 rule with 12" BYO topping portions.</li>
+    <li><b>★ Unique portion</b> for pizza sauce, pizza cheese, shredded provolone, chicken and Philly steak.</li>
+    <li><b>◆</b> 2-3 topping pepperoni portion. <b>■</b> 4+ topping veggie portion. <b>●</b> ½ BYO portion. <b>+</b> ½ Pan portion.</li>
+    <li>Pan pizzas with American cheese are the exception to 4-3-3.</li>
+    <li>Thin crust gets no oregano on Pacific Veggie, Spinach & Feta, Honolulu Hawaiian, Philly Cheese Steak, Memphis BBQ Chicken, Spicy Chicken Bacon Ranch and Sweet Heat Smokehouse.</li>
+    <li>Post-bake items (Hot Buffalo on Spicy Chicken Bacon Ranch) follow the end-bake card.</li></ul></div>`:'';
+  return `${catSeg}${key}
+   <div class="cards">${items.map(it=>{const f=flipped[it.id];
+     const sz=it.cat==='pizza'?'14':'-';const st=stepsFor(it,sz);
+     return `<div class="card"><div class="nm">${esc(it.name)} <span class="pill">${esc(it.tag)}</span></div>${it.note?`<div class="muted" style="font-size:13px">${esc(it.note)}</div>`:''}${f?studyTable(it):drawSvg(it.cat,st,sz)}
+      <div class="row"><button class="btn blue" data-a="flip" data-v="${it.id}">${f?'Show picture':'Show build card'}</button><button class="btn" data-a="practice" data-v="${it.id}">Practice this</button></div></div>`}).join('')}</div>`;
+}
+function studyTable(it){
+  let rows='';
+  if(it.cat==='pizza'){
+    it.groups.forEach((g,gi)=>g.forEach(([ing,a],k)=>{rows+=`<tr class="${gi&&!k?'gstart':''}"><td>${k?'':gi+1}</td><td>${esc(ING[ing].n)}</td>${a.map(v=>`<td class="num">${fmt(v,ing)}</td>`).join('')}</tr>`}));
+    let pan='';it.pan.forEach((g,gi)=>g.forEach(([ing,a],k)=>{pan+=`<tr class="${gi&&!k?'gstart':''}"><td>${k?'':gi+1}</td><td>${esc(ING[ing].n)}</td><td class="num">${fmt(a,ing)}</td></tr>`}));
+    return `<div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Ingredient</th><th class="num">10"</th><th class="num">12"</th><th class="num">14"</th><th class="num">16"</th></tr></thead><tbody>${rows}</tbody></table></div>
+     <div class="tbl-wrap"><table><thead><tr><th>Pan</th><th>Ingredient</th><th class="num">12"</th></tr></thead><tbody>${pan}</tbody></table></div><div class="hint">Ounces, except pepperoni and ham (pieces) and American (slices).</div>`;
+  }
+  it.groups.forEach((g,gi)=>g.forEach(([ing,a],k)=>{rows+=`<tr class="${gi&&!k?'gstart':''}"><td>${k?'':gi+1}</td><td>${esc(ING[ing].n)}</td><td class="num">${fmt(a,ing)} ${unit(ing)}</td></tr>`}));
+  return `<div class="tbl-wrap"><table><thead><tr><th>Step</th><th>Ingredient</th><th class="num">Portion</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+// ---------- Portion Drill ----------
+let D={topic:'all',q:null,picked:null,right:0,total:0,streak:0};
+const DTOPICS={all:'Everything',tops:'BYO Toppings',sauce:'Sauce & Cheese',pan:'Pan & NY',domino:'Domino',sides:'Breads & Pasta'};
+const szs=['10"','12"','14"','16"'];
+function fv(v,u){if(u==='oz')return(v<0.1?v.toFixed(2):(Math.round(v*10)/10).toFixed(1))+' oz';return u?v+' '+u:String(v)}
+function mkQ(q,src,ans,pool,u){
+  const p=[...new Set(pool)].filter(x=>!eq(x,ans)).sort((a,b)=>Math.abs(a-ans)-Math.abs(b-ans));
+  const d=p.slice(0,6).sort(()=>Math.random()-.5).slice(0,3);
+  const lad=u==='oz'?[.2,.5,.7,1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8]:[1,2,4,5,6,7,8,9,12,14,16,18,20,24];
+  for(const c of lad){if(d.length>=3)break;if(!eq(c,ans)&&!d.some(y=>eq(y,c)))d.push(c)}
+  return{q,src,ans:fv(ans,u),opts:[ans,...d].sort((a,b)=>a-b).map(v=>fv(v,u))};
+}
+const flat=o=>Object.values(o).flatMap(v=>Array.isArray(v)?v:typeof v==='object'?flat(v):[v]);
+const GEN={
+  domino(){
+    if(Math.random()<.4){const f=pick([['Domino: provolone',DOM.prov],['Domino: pizza cheese',DOM.cheese],['Domino: pizza sauce (regular)',DOM.sauceR],['Domino: pizza sauce (light)',DOM.sauceL],['Domino: any other sauce (regular)',DOM.otherR],['Domino: any other sauce (light)',DOM.otherL],['Domino cheese only: extra pizza cheese on top of the sauce',DOM.cheeseOnly]]);
+      return mkQ(f[0]+'?','Domino portions card',f[1],[.5,.7,1,1.5,2,2.5,3],'oz')}
+    const n=pick([1,2,3]),pp=pick(n===3?['r','l']:['r','l','x']),pep=Math.random()<.35,lbl={r:'Regular',l:'Light',x:'Extra'}[pp];
+    if(Math.random()<.12)return{q:'Domino: what is the most toppings it can have?',src:'Domino portions card',ans:'3',opts:['2','3','4','5']};
+    return mkQ(`Domino, ${n}-topping: ${lbl} ${pep?'pepperoni or ham':'portion of any other topping'}?`,'Domino portions card',DOM.tops[n][pp][pep?0:1],Object.values(DOM.tops).flatMap(t=>Object.values(t).map(a=>a[pep?0:1])),pep?'slices':'oz');
+  },
+  tops(){
+    if(Math.random()<.25){const ing=pick(['cheddar','prov','parm','feta','american']),a=ALLPZ[ing],c=Math.floor(Math.random()*4),x=Math.random()<.4;
+      return mkQ(`${szs[c]} pizza, any topping count: how much ${ING[ing].n}${x?' (Extra)':''}?`,a.label+' chart',a[x?'x':'r'][c],[...a.r,...a.x],ing==='american'?'slices':'oz')}
+    const g=pick(Object.values(TOPS)),ing=pick(g.ings),k=pick(g.twoPlus?['1','23']:['1','23','4']),c=Math.floor(Math.random()*4),x=Math.random()<.35;
+    const lbl=g.twoPlus&&k==='23'?'2+ topping':countLabel(k);
+    return mkQ(`${szs[c]} ${lbl} pizza: how much ${ING[ing].n}${x?' (Extra)':''}?`,g.label+' chart',g.t[k][x?'x':'r'][c],flat(g.t),ing==='pep'||ing==='ham'?'slices':'oz');
+  },
+  sauce(){
+    const c=Math.floor(Math.random()*4);
+    if(Math.random()<.5){const opts=[['Pizza Sauce',STD_SAUCE.pizzasauce],['Pacific Veggie sauce',PV_SAUCE],['Honey BBQ',STD_SAUCE.honeybbq],['Alfredo, Garlic Parm or Ranch',STD_SAUCE.ranch]];const[n,a]=pick(opts);
+      return mkQ(`Standard ${n} on a ${szs[c]} Hand Tossed, Thin, Gluten Free or Stuffed Crust?`,'Standard sauce chart',a[c],flat(opts.map(o=>o[1])),'oz')}
+    const just=Math.random()<.5,x=Math.random()<.4,a=HT_CHEESE[(just?'just':'with')+(x?'X':'R')];
+    return mkQ(`Pizza cheese, ${szs[c]} Hand Tossed ${just?'just cheese':'with toppings'}: ${x?'extra cheese top layer':'regular bottom layer'}?`,'Pizza cheese chart (HT, Thin, GF, Stuffed)',a[c],flat(HT_CHEESE),'oz');
+  },
+  pan(){
+    const r=Math.random();
+    if(r<.4){const f=pick([['Pan pizza: provolone around the pan',PAN.prov],['Pan pizza: pizza sauce',PAN.sauce],['Pan pizza: Pacific Veggie sauce',PAN.pvSauce],['Pan with toppings: pizza cheese (regular)',PAN.withR],['Pan with toppings: extra cheese top layer',PAN.withX],['Pan just cheese: pizza cheese (regular)',PAN.justR],['Pan just cheese: extra cheese top layer',PAN.justX]]);
+      return mkQ(f[0]+'?','Pan pizza chart',f[1],[...flat(PAN),2,2.5,3.5,5],'oz')}
+    const i=Math.floor(Math.random()*3),s=['12"','14"','16"'][i];
+    if(r<.55)return{q:`A ${s} New York Style is stretched from which dough?`,src:'Edge stretch',ans:['10"','12"','14"'][i],opts:['10"','12"','14"','16"']};
+    const f=pick([['pizza sauce',NY.sauce],['pizza cheese',NY.cheese],['shredded provolone',NY.prov]]);
+    return mkQ(`${s} New York Style: ${f[0]}?`,'New York Style chart',f[1][i],flat(NY),'oz');
+  },
+  sides(){
+    const facts=[
+      ['Stuffed Cheesy Bread: pizza cheese on the bottom half',1.5,'oz',[1,2,2.5,3]],['Stuffed Cheesy Bread: cheddar cheese blend on top',3,'oz',[1.5,2,2.5,4]],
+      ['Stuffed Cheesy Bread, Spinach & Feta: spinach',.5,'oz',[.2,.7,1,1.5]],['Stuffed Cheesy Bread, Spinach & Feta: feta',.5,'oz',[.2,.7,1,1.5]],
+      ['Stuffed Cheesy Bread, Bacon & Jalapeño: bacon',1,'oz',[.5,.7,1.5,2]],['Stuffed Cheesy Bread, Bacon & Jalapeño: jalapeño',.7,'oz',[.5,1,1.5]],
+      ['Stuffed Cheesy Bread, Pepperoni: how many pepperoni',14,'pcs',[12,16,18,20]],['Stuffed Cheesy Bread: how many cuts',7,'cuts',[6,8,9]],
+      ['Chicken Alfredo: pasta',5.5,'oz',[4,4.5,5,6]],['Chicken Alfredo: chicken',2,'oz',[1.5,2.5,3]],['Chicken Alfredo: alfredo sauce',4,'oz',[3,3.5,4.5,5]],
+      ['5-Cheese Mac & Cheese: pasta',5.5,'oz',[4,4.5,5,6]],['5-Cheese Mac & Cheese: shredded parm asiago',.2,'oz',[.5,.7,1]],['5-Cheese Mac & Cheese: cheddar cheese blend',2,'oz',[1,1.5,2.5,3]],
+      ['5-Cheese Mac & Cheese: American cheese slices (cut into 4 triangles)',2,'slices',[1,3,4]],['Spicy Buffalo Mac & Cheese: post-bake hot buffalo',.5,'oz',[.7,1,1.5]]];
+    if(Math.random()<.08)return{q:'Stuffed Cheesy Bread: stretch the Pan dough ball to what size before cutting it in half?',src:'Bread side procedures',ans:'16" x 10"',opts:['12" x 12"','14" x 10"','16" x 10"','16" x 12"']};
+    const f=pick(facts);return mkQ(f[0]+'?',f[0].startsWith('Stuffed')?'Bread side procedures':'Pasta portions',f[1],f[3],f[2]);
+  }
+};
+function nextDrill(){const t=D.topic==='all'?pick(['tops','tops','sauce','pan','sides','domino']):D.topic;D.q=GEN[t]();D.picked=null}
+function drillHTML(){
+  if(!D.q)nextDrill();const q=D.q;
+  const opts=q.opts.map((o,i)=>{let cls='';if(D.picked!=null){if(o===q.ans)cls=' correct';else if(i===D.picked)cls=' wrong'}
+    return `<button class="dopt${cls}" data-a="dans" data-v="${i}" ${D.picked!=null?'disabled':''}>${esc(o)}</button>`}).join('');
+  const fb=D.picked==null?'':q.opts[D.picked]===q.ans?`<div class="dfb v-good">Correct.</div>`:`<div class="dfb v-bad">Not quite. The chart says ${esc(q.ans)}.</div>`;
+  return `<div class="controls"><div class="seg">${Object.entries(DTOPICS).map(([k,l])=>`<button aria-pressed="${D.topic===k}" data-a="dtopic" data-v="${k}">${l}</button>`).join('')}</div></div>
+   <div class="rushbar"><div><div class="k">Score</div><div class="v">${D.right}/${D.total}</div></div><div><div class="k">Streak</div><div class="v">${D.streak}</div></div><div><div class="k">Best streak</div><div class="v">${STORE.drillBest||0}</div></div></div>
+   <div class="panel dcard"><div class="lbl">${esc(q.src)}</div><div class="dq">${esc(q.q)}</div><div class="dopts">${opts}</div>${fb}
+   <div class="actions"><button class="btn ${D.picked!=null?'primary big':''}" data-a="dnext">${D.picked!=null?'Next question':'Skip'}</button></div></div>`;
+}
+function chartTable(title,rows,cols){
+  return `<div class="panel chart"><h3>${esc(title)}</h3><div class="tbl-wrap"><table><thead><tr><th></th>${cols.map(c=>`<th class="num">${c}</th>`).join('')}</tr></thead><tbody>${rows.map(([l,a,u])=>`<tr><td>${esc(l)}</td>${a.map(v=>`<td class="num">${u==='ct'?v:fv(v,'oz').replace(' oz','')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+}
+function byoChartsHTML(){
+  let h=`<div class="key"><h3>How BYO portions work</h3><ul>
+   <li>Topping portions depend on how many toppings are on the pizza: 1, 2-3, or 4+. Spinach has a 1 and a 2+ column.</li>
+   <li>Cheddar, provolone, parm/asiago, feta and American use one portion on all pizzas.</li>
+   <li>Pan: provolone 4.0, sauce 3.0, cheese 3.0 (the 4-3-3 rule), then 12" BYO topping portions.</li>
+   <li>New York Style gets half the standard cheese portion plus provolone, and cheese-only NY uses the same cheese portions as NY with toppings.</li>
+   <li>Extra cheese is a top layer added on top of the bottom layer.</li></ul></div><div class="charts">`;
+  Object.values(TOPS).forEach(g=>{const rows=[];Object.entries(g.t).forEach(([k,t])=>{if(g.twoPlus&&k==='4')return;const l=g.twoPlus&&k==='23'?'2+ topping':countLabel(k);rows.push([l,t.r,g.ings[0]==='pep'?'ct':''],[l+' extra',t.x,g.ings[0]==='pep'?'ct':''])});h+=chartTable(g.label,rows,szs)});
+  h+=chartTable('Cheeses, all pizzas',[['Cheddar & Provolone',ALLPZ.cheddar.r],['Cheddar & Provolone extra',ALLPZ.cheddar.x],['Parm/Asiago & Feta',ALLPZ.parm.r],['Parm/Asiago & Feta extra',ALLPZ.parm.x],['American (slices)',ALLPZ.american.r,'ct'],['American extra (slices)',ALLPZ.american.x,'ct']],szs);
+  h+=chartTable('Standard sauce: HT, Thin, GF, NY, Stuffed',[['Pizza Sauce',STD_SAUCE.pizzasauce],['Pacific Veggie',PV_SAUCE],['Honey BBQ',STD_SAUCE.honeybbq],['Alfredo, Garlic Parm & Ranch',STD_SAUCE.ranch]],szs);
+  h+=chartTable('Pizza cheese: HT, Thin, GF, Stuffed',[['With toppings, bottom',HT_CHEESE.withR],['With toppings, extra top',HT_CHEESE.withX],['Just cheese, bottom',HT_CHEESE.justR],['Just cheese, extra top',HT_CHEESE.justX]],szs);
+  h+=chartTable('Pan pizza (12")',[['Provolone',[PAN.prov]],['Sauce',[PAN.sauce]],['Pacific Veggie sauce',[PAN.pvSauce]],['Cheese with toppings',[PAN.withR]],['Extra, with toppings',[PAN.withX]],['Cheese, just cheese',[PAN.justR]],['Extra, just cheese',[PAN.justX]]],['12"']);
+  h+=chartTable('New York Style',[['1. Sauce',NY.sauce],['2. Pizza cheese',NY.cheese],['3. Shredded provolone',NY.prov]],['12"','14"','16"']);
+  h+=`<div class="panel chart"><h3>NY edge stretch</h3><ul style="margin:0;padding-left:18px"><li>10" dough makes a 12" NY</li><li>12" dough makes a 14" NY</li><li>14" dough makes a 16" NY</li></ul></div></div>`;
+  return h;
+}
+function dominoChartsHTML(){
+  const rows=[];[1,2,3].forEach(n=>['r','l','x'].forEach(p=>{const a=DOM.tops[n][p];if(a)rows.push([`${n}-topping ${({r:'regular',l:'light',x:'extra'})[p]}`,a])}));
+  return `<div class="key"><h3>Domino rules</h3><ul>
+   <li>Provolone 2.0 and pizza cheese 2.0 go down first, then the sauce.</li>
+   <li>All toppings go on top of the sauce.</li>
+   <li>Cheese only gets an extra 1.0 oz pizza cheese on top of the sauce.</li>
+   <li>Extra pizza cheese counts as a topping and uses the regular topping portion.</li>
+   <li>3 toppings is the maximum, and extra isn't allowed at 3 toppings.</li></ul></div><div class="charts">
+   ${chartTable('Sauce & cheese',[['Provolone',[DOM.prov]],['Pizza cheese',[DOM.cheese]],['Pizza sauce, regular',[DOM.sauceR]],['Pizza sauce, light',[DOM.sauceL]],['All other sauces, regular',[DOM.otherR]],['All other sauces, light',[DOM.otherL]]],['oz'])}
+   <div class="panel chart"><h3>Toppings</h3><div class="tbl-wrap"><table><thead><tr><th></th><th class="num">Pep & Ham</th><th class="num">All other (oz)</th></tr></thead><tbody>${rows.map(([l,a])=>`<tr><td>${l}</td><td class="num">${a[0]}</td><td class="num">${fv(a[1],'oz').replace(' oz','')}</td></tr>`).join('')}</tbody></table></div></div></div>`;
+}
+function reviewHTML(){
+  if(V.phase==='run')return `<div class="rushbar"><div><div class="k">Missed review</div><div class="v">${V.i+1} of ${V.queue.length}</div></div><div><div class="k">Cleared</div><div class="v">${V.cleared}</div></div></div>`+builderHTML();
+  const list=Object.entries(STORE.missed).sort((a,b)=>a[1].pct-b[1].pct);
+  const done=V.phase==='done'?`<div class="key"><h3>Review finished</h3><p style="margin:0">You cleared ${V.cleared} of ${V.done} builds. ${list.length?'The rest are still on the list.':'Nothing left to retest.'}</p></div>`:'';
+  if(!list.length)return done+`<div class="setup"><h2>Missed Review</h2><p>Any build you score under 100% lands here so you can retest it. Score 100% and it comes off the list. Nothing here right now.</p><button class="btn primary" data-a="tab" data-v="build">Go build something</button></div>`;
+  return done+`<div class="setup" style="max-width:none"><h2>Missed Review</h2><p>${list.length} build${list.length>1?'s':''} to retest, lowest score first.</p></div>
+   <div class="actions" style="margin:0 0 12px"><button class="btn primary big" data-a="reviewStart">Retest all</button><button class="btn" data-a="reviewClear">Clear list</button></div>
+   <div class="review-list">${list.map(([k,v])=>{const[id,s]=k.split('|');const it=itemById(id);if(!it)return '';
+     return `<div class="review-item"><div><b>${esc(it.name)}</b> <span class="muted">${s!=='-'?sizeLabel(s)+' · ':''}${esc(CATS[it.cat])}</span><div class="muted" style="font-size:13px">Last score ${v.pct}%</div></div><button class="btn" data-a="reviewOne" data-v="${k}">Retest</button></div>`}).join('')}</div>`;
+}
+function render(){
+  renderTabs();let h='';
+  if(tab==='build')h=practiceControls()+builderHTML();
+  else if(tab==='rush')h=rushHTML();
+  else if(tab==='study')h=studyHTML();
+  else if(tab==='drill')h=drillHTML();
+  else h=reviewHTML();
+  $('#app').innerHTML=h+((tab==='build'||(tab==='rush'&&R.phase==='run')||(tab==='review'&&V.phase==='run'))?sheetHTML():'');
+}
+
+// ---------- Rush timer ----------
+function tick(){
+  if(R.phase!=='run')return;const now=Date.now();
+  if(!B.result){R.remaining-=now-R.last}
+  R.last=now;const el=$('#rtime');if(el)el.textContent=clock(R.remaining);
+  if(R.remaining<=0)endRush();
+}
+function endRush(){R.phase='done';clearInterval(R.timer);STORE.rushBest=Math.max(STORE.rushBest||0,R.perfect);save();sheet=null;render()}
+
+// ---------- Events ----------
+function startPractice(){if(P.cat==='byo'||P.cat==='domino'){const b=P.cat==='byo'?makeByo():makeDomino();loadBuild(b,b.size,'practice');return}
+  loadBuild(itemById(P.item),P.cat==='pizza'?P.size:'-','practice')}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-a]');if(!t||t.tagName==='SELECT')return;const a=t.dataset.a,v=t.dataset.v;
+  switch(a){
+    case 'tab':tab=v;sheet=null;if(v==='build'&&B.mode!=='practice')startPractice();break;
+    case 'pcat':P.cat=v;if(v!=='byo'&&v!=='domino')P.item=ITEMS.find(i=>i.cat===v).id;startPractice();break;
+    case 'psize':P.size=v;startPractice();break;
+    case 'nextRandom':{if(P.cat==='byo'||P.cat==='domino'){startPractice();break}const r=randomTarget(P.cat);P.item=r.item.id;if(r.size!=='-')P.size=r.size;startPractice();break}
+    case 'retry':B.layers=[];B.result=null;break;
+    case 'dtopic':D.topic=v;nextDrill();break;
+    case 'dans':if(D.q&&D.picked==null){D.picked=+v;D.total++;if(D.q.opts[D.picked]===D.q.ans){D.right++;D.streak++;if(D.streak>(STORE.drillBest||0)){STORE.drillBest=D.streak;save()}}else D.streak=0}break;
+    case 'dnext':nextDrill();break;
+    case 'pick':sheet=v;break;
+    case 'close':sheet=null;break;
+    case 'add':B.layers.push({ing:sheet,amt:parseFloat(v)});sheet=null;break;
+    case 'rm':B.layers.splice(+v,1);break;
+    case 'up':{const i=+v;if(i>0){const x=B.layers[i];B.layers[i]=B.layers[i-1];B.layers[i-1]=x}break}
+    case 'clear':B.layers=[];break;
+    case 'submit':{B.result=grade(stepsFor(B.item,B.size),B.layers);record(B.item,B.size,B.result.pct);
+      if(B.mode==='rush'){R.builds++;R.sum+=B.result.pct;if(B.result.pct>=100)R.perfect++}
+      if(B.mode==='review'&&B.result.pct>=100)V.cleared++;break}
+    case 'skip':{const r=randomTarget(R.cat);loadBuild(r.item,r.size,'rush');break}
+    case 'rcat':R.cat=v;break;
+    case 'rdur':R.dur=+v;break;
+    case 'rushStart':case 'rushAgain':{Object.assign(R,{phase:'run',remaining:R.dur*1000,last:Date.now(),builds:0,perfect:0,sum:0});const r=randomTarget(R.cat);loadBuild(r.item,r.size,'rush');clearInterval(R.timer);R.timer=setInterval(tick,250);break}
+    case 'rushNext':{R.last=Date.now();if(R.remaining<=0){endRush();return}const r=randomTarget(R.cat);loadBuild(r.item,r.size,'rush');break}
+    case 'rushEnd':endRush();return;
+    case 'scat':studyCat=v;break;
+    case 'flip':flipped[v]=!flipped[v];break;
+    case 'practice':{const it=itemById(v);P.cat=it.cat;P.item=it.id;tab='build';startPractice();break}
+    case 'reviewStart':case 'reviewOne':{V.queue=a==='reviewOne'?[v]:Object.entries(STORE.missed).sort((x,y)=>x[1].pct-y[1].pct).map(x=>x[0]);V.i=0;V.cleared=0;V.done=V.queue.length;V.phase='run';loadQueued();break}
+    case 'reviewNext':V.i++;if(V.i>=V.queue.length){V.phase='done'}else loadQueued();break;
+    case 'reviewClear':STORE.missed={};save();V.phase='list';break;
+  }
+  render();
+  if(a==='submit'||a==='rushNext'||a==='reviewNext'||a==='nextRandom'||a==='skip'){const el=a==='submit'?document.querySelector('.result'):document.querySelector('.order-card');if(el)el.scrollIntoView({block:'start',behavior:'smooth'})}
+});
+function loadQueued(){const[id,s]=V.queue[V.i].split('|');loadBuild(itemById(id),s,'review')}
+document.addEventListener('change',e=>{if(e.target.id==='pitem'){P.item=e.target.value;startPractice();render()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sheet){sheet=null;render()}});
+
+startPractice();render();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
